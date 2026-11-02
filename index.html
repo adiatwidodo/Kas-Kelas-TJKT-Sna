@@ -406,6 +406,10 @@
 
                     <!-- Tombol Ekspor Excel, Pengaturan PIN, Reset & Logout -->
                     <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="openImportExcelModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-950/30 transition active:scale-95" title="Impor Data Kas & Pengeluaran dari File Excel (.xlsx / .xls)">
+                            <i data-lucide="file-up" class="w-4 h-4"></i>
+                            <span>Import Excel</span>
+                        </button>
                         <button onclick="exportToExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/30 transition active:scale-95" title="Ekspor Laporan Kas Kelas ke File Microsoft Excel (.xlsx)">
                             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
                             <span>Ekspor ke Excel (.xlsx)</span>
@@ -516,7 +520,11 @@
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                        <!-- Tombol Cepat Ekspor Excel di Atas Tabel -->
+                        <!-- Tombol Cepat Import & Ekspor Excel di Atas Tabel -->
+                        <button type="button" onclick="openImportExcelModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition shadow-2xs">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            <span>Import Excel</span>
+                        </button>
                         <button type="button" onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition shadow-sm">
                             <i data-lucide="download" class="w-4 h-4"></i>
                             <span>Unduh Excel (.xlsx)</span>
@@ -732,6 +740,109 @@
         </div>
     </div>
 
+    <!-- Modal Import dari Excel (.xlsx / .xls) -->
+    <div id="modal-import-excel" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i data-lucide="file-up" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Import Data Kas dari Excel</h3>
+                        <p class="text-[11px] text-slate-500">Mendukung format asli <code class="font-mono bg-slate-100 px-1 rounded">KASKLS11TJKT1-1.xlsx</code> & hasil ekspor aplikasi</p>
+                    </div>
+                </div>
+                <button onclick="closeImportExcelModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="my-4 overflow-y-auto space-y-4 pr-1">
+                <!-- Dropzone / File Input -->
+                <div id="excel-dropzone"
+                    onclick="triggerExcelFileInput()"
+                    ondragover="handleExcelDragOver(event)"
+                    ondragleave="handleExcelDragLeave(event)"
+                    ondrop="handleExcelDrop(event)"
+                    class="border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/40 hover:bg-indigo-50/80 rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2">
+                    <div class="p-3 bg-white text-indigo-600 rounded-2xl shadow-xs border border-indigo-100">
+                        <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-800">Klik untuk pilih file Excel atau seret ke sini</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Format yang didukung: <strong>.xlsx, .xls, .csv</strong></p>
+                    </div>
+                    <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelFileSelect(event)">
+                </div>
+
+                <!-- Error Box jika format tidak dikenali -->
+                <div id="import-error-box" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-start gap-2.5">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+                    <span id="import-error-text">Gagal membaca file Excel.</span>
+                </div>
+
+                <!-- Preview Hasil Pembacaan File Excel -->
+                <div id="import-preview-container" class="hidden space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span id="import-file-name" class="text-xs font-bold text-slate-800 truncate max-w-[260px]">file.xlsx</span>
+                        </div>
+                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold uppercase">Siap Diimpor</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                        <div class="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                            <span class="text-[10px] text-slate-400 block uppercase font-semibold">Jumlah Siswa</span>
+                            <strong id="preview-members-count" class="text-sm font-extrabold text-slate-800">0 Siswa</strong>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                            <span class="text-[10px] text-slate-400 block uppercase font-semibold">Minggu Terdeteksi</span>
+                            <strong id="preview-weeks-count" class="text-sm font-extrabold text-indigo-600">16 Minggu</strong>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                            <span class="text-[10px] text-slate-400 block uppercase font-semibold">Total Kas Masuk</span>
+                            <strong id="preview-total-income" class="text-sm font-extrabold text-emerald-600">Rp 0</strong>
+                        </div>
+                        <div class="bg-white p-2.5 rounded-xl border border-slate-200/80">
+                            <span class="text-[10px] text-slate-400 block uppercase font-semibold">Data Pengeluaran</span>
+                            <strong id="preview-expenses-count" class="text-sm font-extrabold text-rose-600">0 Item</strong>
+                        </div>
+                    </div>
+
+                    <!-- Opsi Impor Pengeluaran -->
+                    <div class="pt-1 flex items-center justify-between text-xs text-slate-600">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="import-include-expenses" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <span>Perbarui juga daftar pengeluaran (jika ada di dalam file Excel)</span>
+                        </label>
+                    </div>
+
+                    <!-- Sampel 5 Siswa Pertama -->
+                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <div class="px-3 py-1.5 bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex justify-between">
+                            <span>Pratinjau Data Siswa</span>
+                            <span>Status Kas Terbaca</span>
+                        </div>
+                        <div id="preview-members-list" class="divide-y divide-slate-100 text-xs max-h-36 overflow-y-auto">
+                            <!-- Diisi via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeImportExcelModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                <button type="button" id="btn-confirm-import" onclick="applyExcelImport()" disabled
+                    class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white transition flex items-center gap-1.5">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Terapkan Data Impor</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2 border border-slate-700 transition-all">
         <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
@@ -773,6 +884,9 @@
 
         // Fungsi mendapatkan label tanggal format dd/mm/yy untuk Minggu ke-w (otomatis +7 hari jika > 16)
         function getWeekDateLabel(weekNum) {
+            if (appData && Array.isArray(appData.customWeekDates) && appData.customWeekDates[weekNum - 1]) {
+                return appData.customWeekDates[weekNum - 1];
+            }
             if (weekNum >= 1 && weekNum <= BASE_WEEK_DATES.length) {
                 return BASE_WEEK_DATES[weekNum - 1];
             }
@@ -859,6 +973,10 @@
         let currentMemberFilter = 'all';
         let editingMemberId = null;
 
+        // Penanda ketika dialog pemilihan file Excel sedang dibuka agar tidak memicu Auto-Logout
+        let isImportingFile = false;
+        let parsedExcelData = null;
+
         // Format Angka ke Rupiah
         function formatRp(number) {
             return new Intl.NumberFormat('id-ID', {
@@ -928,6 +1046,7 @@
             // Tutup modal sensitif jika sedang terbuka
             closeCustomPayModal();
             closeCredentialModal();
+            closeImportExcelModal();
 
             const msg = reasonMessage || "Sesi Bendahara otomatis berakhir karena Anda keluar dari halaman/aplikasi.";
             autoLogoutNoticeMessage = msg;
@@ -1744,6 +1863,424 @@
         }
 
         // ==========================================
+        // FITUR IMPORT DARI EXCEL (.XLSX / .XLS)
+        // ==========================================
+        function openImportExcelModal() {
+            parsedExcelData = null;
+            document.getElementById('excel-file-input').value = '';
+            document.getElementById('import-error-box').classList.add('hidden');
+            document.getElementById('import-preview-container').classList.add('hidden');
+            document.getElementById('btn-confirm-import').disabled = true;
+            document.getElementById('modal-import-excel').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeImportExcelModal() {
+            isImportingFile = false;
+            parsedExcelData = null;
+            const modal = document.getElementById('modal-import-excel');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // Buka dialog file dengan proteksi agar Auto-Logout tidak terpicu saat jendela File Picker OS terbuka
+        function triggerExcelFileInput() {
+            isImportingFile = true;
+            const fileInput = document.getElementById('excel-file-input');
+            if (fileInput) {
+                fileInput.click();
+            }
+            // Reset flag saat fokus kembali ke window
+            window.addEventListener('focus', function onFocusReturn() {
+                window.removeEventListener('focus', onFocusReturn);
+                setTimeout(() => {
+                    isImportingFile = false;
+                }, 1200);
+            }, { once: true });
+        }
+
+        function handleExcelDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('excel-dropzone').classList.add('border-indigo-600', 'bg-indigo-100/60');
+        }
+
+        function handleExcelDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('excel-dropzone').classList.remove('border-indigo-600', 'bg-indigo-100/60');
+        }
+
+        function handleExcelDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.getElementById('excel-dropzone').classList.remove('border-indigo-600', 'bg-indigo-100/60');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                processExcelFile(e.dataTransfer.files[0]);
+            }
+        }
+
+        function handleExcelFileSelect(e) {
+            isImportingFile = false;
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                processExcelFile(file);
+            }
+        }
+
+        // Konversi nilai tanggal sel Excel (Serial Date, Date Object, YYYY-MM-DD, atau dd/mm/yy) ke dd/mm/yy & YYYY-MM-DD
+        function normalizeExcelDate(val) {
+            if (val === null || val === undefined || val === '') return null;
+
+            // Jika angka serial Excel (contoh: 46220)
+            if (typeof val === 'number' && val > 20000 && val < 80000) {
+                const utcDays = Math.floor(val - 25569);
+                const dateObj = new Date(utcDays * 86400 * 1000);
+                const d = String(dateObj.getUTCDate()).padStart(2, '0');
+                const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const yFull = dateObj.getUTCFullYear();
+                const yShort = String(yFull).slice(-2);
+                return { ddmmyy: `${d}/${m}/${yShort}`, iso: `${yFull}-${m}-${d}` };
+            }
+
+            // Jika objek Date
+            if (val instanceof Date && !isNaN(val)) {
+                const d = String(val.getDate()).padStart(2, '0');
+                const m = String(val.getMonth() + 1).padStart(2, '0');
+                const yFull = val.getFullYear();
+                return { ddmmyy: `${d}/${m}/${String(yFull).slice(-2)}`, iso: `${yFull}-${m}-${d}` };
+            }
+
+            const str = String(val).trim();
+
+            // Format dd/mm/yy atau dd/mm/yyyy atau dd-mm-yyyy
+            const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+            if (dmyMatch) {
+                const d = dmyMatch[1].padStart(2, '0');
+                const m = dmyMatch[2].padStart(2, '0');
+                let y = dmyMatch[3];
+                const yFull = y.length === 2 ? `20${y}` : y;
+                const yShort = yFull.slice(-2);
+                return { ddmmyy: `${d}/${m}/${yShort}`, iso: `${yFull}-${m}-${d}` };
+            }
+
+            // Format YYYY-MM-DD (atau dengan timestamp)
+            const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (ymdMatch) {
+                const yFull = ymdMatch[1];
+                const m = ymdMatch[2].padStart(2, '0');
+                const d = ymdMatch[3].padStart(2, '0');
+                return { ddmmyy: `${d}/${m}/${yFull.slice(-2)}`, iso: `${yFull}-${m}-${d}` };
+            }
+
+            return null;
+        }
+
+        // Bersihkan angka Rupiah dari string atau number
+        function parseRupiahNumber(val) {
+            if (typeof val === 'number' && !isNaN(val)) return Math.round(val);
+            if (!val) return NaN;
+            const cleaned = String(val).replace(/[^0-9\-]/g, '');
+            return cleaned ? parseInt(cleaned, 10) : NaN;
+        }
+
+        // Baca dan analisis isi file Excel menggunakan SheetJS
+        function processExcelFile(file) {
+            const errorBox = document.getElementById('import-error-box');
+            const errorText = document.getElementById('import-error-text');
+            const previewContainer = document.getElementById('import-preview-container');
+            const confirmBtn = document.getElementById('btn-confirm-import');
+
+            errorBox.classList.add('hidden');
+            previewContainer.classList.add('hidden');
+            confirmBtn.disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+
+                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                        throw new Error("File Excel tidak memiliki sheet.");
+                    }
+
+                    // Ambil sheet pertama (Data Kas)
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+
+                    if (!rows || rows.length < 2) {
+                        throw new Error("Data di dalam sheet Excel kosong atau terlalu sedikit.");
+                    }
+
+                    // 1. Cari baris Header Tabel Siswa (yang memiliki kolom "NAMA" atau "NAMA SISWA")
+                    let headerRowIdx = -1;
+                    let nameColIdx = -1;
+
+                    for (let r = 0; r < Math.min(rows.length, 20); r++) {
+                        const row = rows[r];
+                        if (!Array.isArray(row)) continue;
+                        for (let c = 0; c < row.length; c++) {
+                            const cellText = String(row[c] || '').trim().toUpperCase();
+                            if (cellText === 'NAMA' || cellText === 'NAMA SISWA' || cellText === 'NAMA ANGGOTA') {
+                                headerRowIdx = r;
+                                nameColIdx = c;
+                                break;
+                            }
+                        }
+                        if (headerRowIdx !== -1) break;
+                    }
+
+                    if (headerRowIdx === -1) {
+                        throw new Error("Kolom 'NAMA' tidak ditemukan. Pastikan menggunakan format tabel kas kelas yang sesuai.");
+                    }
+
+                    const headerRow = rows[headerRowIdx];
+                    const weekCols = [];
+                    let paidColIdx = -1;
+
+                    // Identifikasi kolom minggu (tanggal) dan kolom Jumlah Terbayar
+                    for (let c = nameColIdx + 1; c < headerRow.length; c++) {
+                        const rawHeader = headerRow[c];
+                        const headerStr = String(rawHeader || '').trim();
+                        const upperHeader = headerStr.toUpperCase();
+
+                        if (
+                            upperHeader.includes('JUMLAH') ||
+                            upperHeader.includes('TERBAYAR') ||
+                            upperHeader.includes('SUDAH BAYAR') ||
+                            upperHeader.includes('TOTAL BAYAR')
+                        ) {
+                            if (paidColIdx === -1) paidColIdx = c;
+                            continue;
+                        }
+
+                        if (
+                            upperHeader.includes('TUNGGAKAN') ||
+                            upperHeader.includes('KEKURANGAN') ||
+                            upperHeader.includes('STATUS') ||
+                            upperHeader.includes('KETERANGAN')
+                        ) {
+                            continue;
+                        }
+
+                        // Cek apakah header merupakan tanggal minggu atau label M1, M2, Minggu 1, dst.
+                        const normDate = normalizeExcelDate(rawHeader);
+                        const isWeekLabel = /^(M|MINGGU\s*)\d+/i.test(headerStr);
+                        if (normDate || isWeekLabel) {
+                            weekCols.push({
+                                colIdx: c,
+                                dateLabel: normDate ? normDate.ddmmyy : getWeekDateLabel(weekCols.length + 1)
+                            });
+                        }
+                    }
+
+                    // 2. Baca baris data siswa hingga baris ringkasan ("TOTAL", "PEMASUKAN", atau kosong)
+                    const importedMembers = [];
+                    let currentRowIdx = headerRowIdx + 1;
+
+                    for (; currentRowIdx < rows.length; currentRowIdx++) {
+                        const row = rows[currentRowIdx];
+                        if (!Array.isArray(row)) continue;
+
+                        const rawNo = row[nameColIdx - 1];
+                        const rawName = String(row[nameColIdx] || '').trim();
+                        const upperName = rawName.toUpperCase();
+
+                        // Berhenti jika mencapai baris TOTAL / REKAP / PENGELUARAN
+                        if (
+                            upperName.startsWith('TOTAL') ||
+                            upperName.includes('PEMASUKAN') ||
+                            upperName.includes('PENGELUARAN') ||
+                            upperName.includes('SALDO') ||
+                            upperName === 'TANGGAL'
+                        ) {
+                            break;
+                        }
+
+                        // Jika nama kosong dan nomor kosong, lewati atau hentikan jika sudah ada siswa
+                        if (!rawName) {
+                            if (importedMembers.length > 0) break;
+                            continue;
+                        }
+
+                        // Hitung jumlah centang minggu (☑, true, v, √, 1)
+                        let checkedWeeksCount = 0;
+                        weekCols.forEach(wc => {
+                            const cellVal = row[wc.colIdx];
+                            if (cellVal === true || cellVal === 1) {
+                                checkedWeeksCount++;
+                            } else if (typeof cellVal === 'string') {
+                                const s = cellVal.trim().toUpperCase();
+                                if (s === '☑' || s === '✓' || s === '✔' || s === 'V' || s === 'TRUE' || s === '1' || s === 'LUNAS' || s === 'X') {
+                                    checkedWeeksCount++;
+                                }
+                            }
+                        });
+
+                        // Ambil nominal dari kolom Jumlah (Rp) jika tersedia
+                        let paidAmount = checkedWeeksCount * WEEKLY_FEE;
+                        if (paidColIdx !== -1) {
+                            const parsedPaid = parseRupiahNumber(row[paidColIdx]);
+                            if (!isNaN(parsedPaid) && parsedPaid >= 0) {
+                                // Gunakan nilai terbesar atau hasil kolom Jumlah jika kolom centang tidak ada
+                                if (weekCols.length === 0 || parsedPaid > 0 || checkedWeeksCount === 0) {
+                                    paidAmount = parsedPaid;
+                                }
+                            }
+                        }
+
+                        importedMembers.push({
+                            id: Date.now() + importedMembers.length + 1,
+                            name: rawName,
+                            paidAmount: paidAmount
+                        });
+                    }
+
+                    if (importedMembers.length === 0) {
+                        throw new Error("Tidak ada daftar nama siswa yang berhasil dibaca dari file Excel.");
+                    }
+
+                    // 3. Cari dan baca bagian Tabel Pengeluaran di bagian bawah sheet (jika ada)
+                    const importedExpenses = [];
+                    let expHeaderRowIdx = -1;
+                    let expDateCol = -1;
+                    let expTitleCol = -1;
+                    let expCategoryCol = -1;
+                    let expAmountCol = -1;
+
+                    for (let r = currentRowIdx; r < rows.length; r++) {
+                        const row = rows[r];
+                        if (!Array.isArray(row)) continue;
+
+                        for (let c = 0; c < row.length; c++) {
+                            const cellUpper = String(row[c] || '').trim().toUpperCase();
+                            if (cellUpper.startsWith('TANGGAL')) {
+                                // Cek apakah di baris yang sama ada PENGELUARAN / KEPERLUAN dan NOMINAL
+                                for (let k = c + 1; k < row.length; k++) {
+                                    const nextUpper = String(row[k] || '').trim().toUpperCase();
+                                    if (nextUpper.includes('PENGELUARAN') || nextUpper.includes('KEPERLUAN') || nextUpper.includes('KETERANGAN')) {
+                                        expTitleCol = k;
+                                    } else if (nextUpper.includes('KATEGORI')) {
+                                        expCategoryCol = k;
+                                    } else if (nextUpper.includes('NOMINAL') || nextUpper.includes('JUMLAH')) {
+                                        expAmountCol = k;
+                                    }
+                                }
+                                if (expTitleCol !== -1 && expAmountCol !== -1) {
+                                    expHeaderRowIdx = r;
+                                    expDateCol = c;
+                                    break;
+                                }
+                            }
+                        }
+                        if (expHeaderRowIdx !== -1) break;
+                    }
+
+                    if (expHeaderRowIdx !== -1) {
+                        for (let r = expHeaderRowIdx + 1; r < rows.length; r++) {
+                            const row = rows[r];
+                            if (!Array.isArray(row)) continue;
+
+                            const rawDate = row[expDateCol];
+                            const rawTitle = String(row[expTitleCol] || '').trim();
+                            const rawAmount = parseRupiahNumber(row[expAmountCol]);
+
+                            if (!rawTitle || rawTitle.toUpperCase().includes('TOTAL') || rawTitle === 'Belum ada pengeluaran') {
+                                continue;
+                            }
+                            if (isNaN(rawAmount) || rawAmount <= 0) continue;
+
+                            const normDate = normalizeExcelDate(rawDate);
+                            const expDateIso = normDate ? normDate.iso : new Date().toISOString().split('T')[0];
+                            const expCat = (expCategoryCol !== -1 && row[expCategoryCol])
+                                ? String(row[expCategoryCol]).trim()
+                                : "Perlengkapan Kelas";
+
+                            importedExpenses.push({
+                                id: Date.now() + 500 + importedExpenses.length,
+                                title: rawTitle,
+                                category: expCat === '-' ? 'Perlengkapan Kelas' : expCat,
+                                date: expDateIso,
+                                amount: rawAmount
+                            });
+                        }
+                    }
+
+                    const detectedWeeksCount = weekCols.length > 0 ? weekCols.length : appData.currentWeek;
+                    const customDates = weekCols.map(w => w.dateLabel);
+                    const totalIncome = importedMembers.reduce((sum, m) => sum + m.paidAmount, 0);
+
+                    parsedExcelData = {
+                        fileName: file.name,
+                        currentWeek: detectedWeeksCount,
+                        customWeekDates: customDates.length > 0 ? customDates : BASE_WEEK_DATES.slice(),
+                        members: importedMembers,
+                        expenses: importedExpenses,
+                        totalIncome: totalIncome
+                    };
+
+                    // Tampilkan Pratinjau di Modal
+                    document.getElementById('import-file-name').textContent = file.name;
+                    document.getElementById('preview-members-count').textContent = `${importedMembers.length} Siswa`;
+                    document.getElementById('preview-weeks-count').textContent = `${detectedWeeksCount} Minggu`;
+                    document.getElementById('preview-total-income').textContent = formatRp(totalIncome);
+                    document.getElementById('preview-expenses-count').textContent = `${importedExpenses.length} Transaksi`;
+
+                    const previewList = document.getElementById('preview-members-list');
+                    previewList.innerHTML = '';
+                    importedMembers.slice(0, 8).forEach((m, i) => {
+                        const mgg = Math.floor(m.paidAmount / WEEKLY_FEE);
+                        const item = document.createElement('div');
+                        item.className = "px-3 py-2 flex justify-between items-center hover:bg-slate-50";
+                        item.innerHTML = `
+                            <span class="font-medium text-slate-700 truncate">${i + 1}. ${m.name}</span>
+                            <span class="font-bold text-emerald-600 shrink-0">${formatRp(m.paidAmount)} (${mgg} Mgg)</span>
+                        `;
+                        previewList.appendChild(item);
+                    });
+                    if (importedMembers.length > 8) {
+                        const more = document.createElement('div');
+                        more.className = "px-3 py-1.5 text-center text-[11px] text-slate-400 bg-slate-50 font-medium";
+                        more.textContent = `+ ${importedMembers.length - 8} siswa lainnya siap diimpor...`;
+                        previewList.appendChild(more);
+                    }
+
+                    previewContainer.classList.remove('hidden');
+                    confirmBtn.disabled = false;
+                    lucide.createIcons();
+                } catch (err) {
+                    errorText.textContent = err.message || "Format file Excel tidak dikenali.";
+                    errorBox.classList.remove('hidden');
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Terapkan hasil impor Excel ke dalam aplikasi
+        function applyExcelImport() {
+            if (!parsedExcelData) return;
+
+            appData.members = parsedExcelData.members;
+            appData.currentWeek = parsedExcelData.currentWeek;
+            if (parsedExcelData.customWeekDates && parsedExcelData.customWeekDates.length > 0) {
+                appData.customWeekDates = parsedExcelData.customWeekDates;
+            }
+
+            const includeExpenses = document.getElementById('import-include-expenses').checked;
+            if (includeExpenses && parsedExcelData.expenses && parsedExcelData.expenses.length > 0) {
+                appData.expenses = parsedExcelData.expenses;
+            }
+
+            const importedCount = parsedExcelData.members.length;
+            saveData();
+            populateMemberDropdown();
+            renderAll();
+            closeImportExcelModal();
+            showToast(`Berhasil mengimpor ${importedCount} siswa dari file Excel!`);
+        }
+
+        // ==========================================
         // AKSI & INTERAKSI ADMIN BENDAHARA
         // ==========================================
 
@@ -1889,6 +2426,8 @@
             // 1. Saat pengguna berpindah tab, meminimalkan browser di HP/PC, atau mengunci layar
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
+                    // Jangan auto-logout apabila pengguna sedang membuka dialog pilih file Excel
+                    if (isImportingFile) return;
                     if (isAdminAuthenticated) {
                         triggerSecurityAutoLogout(
                             "Sesi Bendahara otomatis berakhir karena Anda keluar dari halaman/aplikasi.",
@@ -1896,6 +2435,7 @@
                         );
                     }
                 } else if (document.visibilityState === 'visible') {
+                    isImportingFile = false;
                     if (pendingAutoLogoutNotice) {
                         pendingAutoLogoutNotice = false;
                         showToast(autoLogoutNoticeMessage);
@@ -1905,6 +2445,7 @@
 
             // 2. Saat halaman ditutup, di-refresh, atau dinavigasikan ke situs lain
             window.addEventListener('pagehide', () => {
+                if (isImportingFile) return;
                 if (isAdminAuthenticated) {
                     triggerSecurityAutoLogout(
                         "Sesi Bendahara otomatis berakhir karena Anda meninggalkan halaman.",
