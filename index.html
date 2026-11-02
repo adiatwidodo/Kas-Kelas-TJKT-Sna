@@ -299,6 +299,15 @@
 
                     <!-- Form Area -->
                     <div class="p-6 sm:p-8">
+                        <!-- Alert Auto-Logout Notification -->
+                        <div id="auto-logout-banner" class="hidden mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-start gap-2.5">
+                            <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="font-bold text-amber-900">Sesi Dikunci Otomatis</p>
+                                <p id="auto-logout-banner-text" class="mt-0.5 text-amber-700">Sesi Bendahara otomatis berakhir karena Anda keluar dari halaman/aplikasi.</p>
+                            </div>
+                        </div>
+
                         <!-- Alert Error Login -->
                         <div id="login-error" class="hidden mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2.5">
                             <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0"></i>
@@ -337,8 +346,8 @@
 
                         <div class="mt-6 pt-5 border-t border-slate-100 text-center">
                             <p class="text-[11px] text-slate-400 mb-3 flex items-center justify-center gap-1">
-                                <i data-lucide="lock" class="w-3 h-3"></i>
-                                <span>Halaman khusus Bendahara Kelas 11 TJKT 1</span>
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Dilindungi Auto-Logout saat keluar tab/aplikasi browser</span>
                             </p>
                             <button type="button" onclick="switchRole('member')" class="text-xs font-medium text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1 transition">
                                 <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
@@ -367,6 +376,9 @@
                             <h2 class="text-lg font-bold">Panel Bendahara — Kelas 11 TJKT 1</h2>
                             <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-emerald-500 text-slate-950 rounded-md flex items-center gap-1">
                                 <i data-lucide="unlock" class="w-3 h-3"></i> Terautentikasi
+                            </span>
+                            <span class="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-400/30 rounded-md flex items-center gap-1" title="Otomatis keluar jika berpindah tab, meminimalkan browser, atau kembali ke tampilan Anggota">
+                                <i data-lucide="shield-alert" class="w-3 h-3"></i> Auto-Logout Aktif (Keluar Tab/Aplikasi)
                             </span>
                         </div>
                         <p class="text-xs text-slate-400 mt-0.5">Atur minggu berjalan, catat pembayaran 35 siswa, dan kelola pengeluaran kelas.</p>
@@ -738,7 +750,6 @@
     <script>
         const WEEKLY_FEE = 5000;
         const STORAGE_KEY = 'kasKelas_11TJKT1_v3';
-        const AUTH_SESSION_KEY = 'kaskelas_admin_logged_in_v3';
 
         // Daftar Tanggal Asli 16 Minggu dalam Format dd/mm/yy (17/07/26 - 30/10/26)
         const BASE_WEEK_DATES = [
@@ -841,7 +852,10 @@
 
         let appData = {};
         let currentRole = 'member';
+        // Sesi login HANYA disimpan di memori JS (tidak di localStorage/sessionStorage) agar otomatis logout saat refresh/tutup
         let isAdminAuthenticated = false;
+        let pendingAutoLogoutNotice = false;
+        let autoLogoutNoticeMessage = "Sesi Bendahara otomatis berakhir karena Anda keluar dari halaman/aplikasi.";
         let currentMemberFilter = 'all';
         let editingMemberId = null;
 
@@ -871,7 +885,12 @@
                 saveData();
             }
 
-            isAdminAuthenticated = localStorage.getItem(AUTH_SESSION_KEY) === 'true';
+            // Hapus sisa sesi login lama di storage dan paksa selalu mulai dalam keadaan terkunci (false)
+            localStorage.removeItem('kaskelas_admin_logged_in');
+            localStorage.removeItem('kaskelas_admin_logged_in_v3');
+            sessionStorage.removeItem('kaskelas_admin_logged_in');
+            sessionStorage.removeItem('kaskelas_admin_logged_in_v3');
+            isAdminAuthenticated = false;
         }
 
         // Simpan Data ke LocalStorage
@@ -895,11 +914,57 @@
             toast.classList.remove('hidden');
             setTimeout(() => {
                 toast.classList.add('hidden');
-            }, 2600);
+            }, 3200);
+        }
+
+        // Fungsi Keamanan Auto-Logout saat keluar halaman, pindah tab, minimize browser, atau pindah ke tampilan Anggota
+        function triggerSecurityAutoLogout(reasonMessage, notifyWhenVisible = true) {
+            if (!isAdminAuthenticated) return;
+
+            isAdminAuthenticated = false;
+            const loginPwd = document.getElementById('login-password');
+            if (loginPwd) loginPwd.value = '';
+
+            // Tutup modal sensitif jika sedang terbuka
+            closeCustomPayModal();
+            closeCredentialModal();
+
+            const msg = reasonMessage || "Sesi Bendahara otomatis berakhir karena Anda keluar dari halaman/aplikasi.";
+            autoLogoutNoticeMessage = msg;
+
+            // Tampilkan banner pemberitahuan di halaman login
+            const banner = document.getElementById('auto-logout-banner');
+            const bannerText = document.getElementById('auto-logout-banner-text');
+            if (banner && bannerText) {
+                bannerText.textContent = msg;
+                banner.classList.remove('hidden');
+            }
+
+            // Kunci tampilan admin dan kembalikan ke layar login jika masih di tab admin
+            const viewAdmin = document.getElementById('view-admin');
+            const viewLogin = document.getElementById('view-login');
+            if (currentRole === 'admin') {
+                viewAdmin.classList.add('hidden');
+                viewLogin.classList.remove('hidden');
+            }
+
+            updateTabAdminIcon();
+
+            if (notifyWhenVisible) {
+                pendingAutoLogoutNotice = true;
+            } else {
+                showToast(msg);
+            }
         }
 
         // Pindah Mode Tampilan (Anggota <-> Login <-> Bendahara)
         function switchRole(role) {
+            // Jika Bendahara sedang login lalu pindah ke tab Anggota, langsung kunci sesi (Auto-Logout)
+            if (role === 'member' && isAdminAuthenticated) {
+                currentRole = 'member';
+                triggerSecurityAutoLogout("Sesi Bendahara otomatis dikunci saat beralih ke Dashboard Anggota.", false);
+            }
+
             currentRole = role;
             const viewMember = document.getElementById('view-member');
             const viewLogin = document.getElementById('view-login');
@@ -959,17 +1024,19 @@
             const usernameInput = document.getElementById('login-username').value.trim();
             const passwordInput = document.getElementById('login-password').value;
             const errorBox = document.getElementById('login-error');
+            const autoLogoutBanner = document.getElementById('auto-logout-banner');
 
             if (
                 usernameInput.toLowerCase() === appData.adminAuth.username.toLowerCase() &&
                 passwordInput === appData.adminAuth.password
             ) {
                 isAdminAuthenticated = true;
-                localStorage.setItem(AUTH_SESSION_KEY, 'true');
+                pendingAutoLogoutNotice = false;
                 errorBox.classList.add('hidden');
+                if (autoLogoutBanner) autoLogoutBanner.classList.add('hidden');
                 document.getElementById('login-password').value = '';
                 switchRole('admin');
-                showToast("Login berhasil! Selamat datang, Bendahara.");
+                showToast("Login berhasil! Sesi aktif selama Anda berada di halaman ini.");
             } else {
                 errorBox.classList.remove('hidden');
             }
@@ -978,7 +1045,9 @@
         // Proses Logout Bendahara
         function handleAdminLogout() {
             isAdminAuthenticated = false;
-            localStorage.removeItem(AUTH_SESSION_KEY);
+            pendingAutoLogoutNotice = false;
+            const autoLogoutBanner = document.getElementById('auto-logout-banner');
+            if (autoLogoutBanner) autoLogoutBanner.classList.add('hidden');
             switchRole('admin'); // Arahkan kembali ke form login bendahara
             showToast("Anda telah keluar dari sesi Bendahara");
         }
@@ -1688,20 +1757,6 @@
             showToast(`Minggu ke-${nextWeek} (${getWeekDateLabel(nextWeek)}) • Tagihan: ${formatRp(nextWeek * WEEKLY_FEE)}`);
         }
 
-        // ==========================================
-        // AKSI & INTERAKSI ADMIN BENDAHARA
-        // ==========================================
-
-        // Ubah Minggu Berjalan (+1 atau -1)
-        function changeWeek(delta) {
-            const nextWeek = appData.currentWeek + delta;
-            if (nextWeek < 1) return;
-            appData.currentWeek = nextWeek;
-            saveData();
-            renderAll();
-            showToast(`Diubah ke Minggu ke-${nextWeek} (Tagihan: ${formatRp(nextWeek * WEEKLY_FEE)})`);
-        }
-
         // Tambah / Kurangi Pembayaran Kas Anggota Cepat (+ Rp 5.000)
         function updateMemberPayment(memberId, amountDelta) {
             const member = appData.members.find(m => m.id === memberId);
@@ -1829,9 +1884,45 @@
             renderAdminView();
         }
 
+        // Pasang Event Listeners untuk Keamanan Auto-Logout Otomatis
+        function setupAutoLogoutListeners() {
+            // 1. Saat pengguna berpindah tab, meminimalkan browser di HP/PC, atau mengunci layar
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    if (isAdminAuthenticated) {
+                        triggerSecurityAutoLogout(
+                            "Sesi Bendahara otomatis berakhir karena Anda keluar dari halaman/aplikasi.",
+                            true
+                        );
+                    }
+                } else if (document.visibilityState === 'visible') {
+                    if (pendingAutoLogoutNotice) {
+                        pendingAutoLogoutNotice = false;
+                        showToast(autoLogoutNoticeMessage);
+                    }
+                }
+            });
+
+            // 2. Saat halaman ditutup, di-refresh, atau dinavigasikan ke situs lain
+            window.addEventListener('pagehide', () => {
+                if (isAdminAuthenticated) {
+                    triggerSecurityAutoLogout(
+                        "Sesi Bendahara otomatis berakhir karena Anda meninggalkan halaman.",
+                        false
+                    );
+                }
+            });
+
+            window.addEventListener('beforeunload', () => {
+                isAdminAuthenticated = false;
+            });
+        }
+
         // Inisialisasi saat halaman dimuat
         window.onload = function () {
             loadData();
+            setupAutoLogoutListeners();
+
             // Set default tanggal hari ini di form pengeluaran
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('exp-date').value = today;
