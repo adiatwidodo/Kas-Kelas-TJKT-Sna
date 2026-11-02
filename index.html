@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS (XLSX) untuk Ekspor Laporan ke Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -56,7 +58,7 @@
                 <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                     <div class="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5">
                         <i data-lucide="calendar" class="w-4 h-4 text-amber-600"></i>
-                        <span>Minggu <strong id="header-current-week" class="text-amber-950 font-bold">16</strong> <span id="header-current-date" class="hidden md:inline text-amber-700">(30 Okt 2026)</span></span>
+                        <span>Minggu <strong id="header-current-week" class="text-amber-950 font-bold">16</strong> <span id="header-current-date" class="text-amber-700 font-semibold">(30/10/26)</span></span>
                     </div>
 
                     <!-- Role Toggle Tabs -->
@@ -153,7 +155,7 @@
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                         <span id="member-target-calc">16 Minggu x Rp 5.000</span>
-                        <span id="member-target-date" class="text-indigo-600 font-medium">s/d 30 Okt 2026</span>
+                        <span id="member-target-date" class="text-indigo-600 font-semibold">s/d 30/10/26</span>
                     </div>
                 </div>
             </div>
@@ -167,9 +169,9 @@
                         <div>
                             <h3 class="font-bold text-slate-800 flex items-center gap-2">
                                 <i data-lucide="calendar-check" class="w-5 h-5 text-indigo-600"></i>
-                                Kartu Kontrol Mingguan (Juli – Oktober 2026)
+                                Kartu Kontrol Mingguan (Format Tanggal dd/mm/yy)
                             </h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Visualisasi pembayaran kas kamu per minggu (Rp 5.000/minggu)</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Visualisasi pembayaran kas kamu per minggu beserta tanggal tagihannya (Rp 5.000/minggu)</p>
                         </div>
                         <div class="flex items-center gap-3 text-xs">
                             <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Lunas</span>
@@ -238,8 +240,12 @@
                         </div>
                     </div>
 
-                    <div class="mt-6 pt-3 border-t border-slate-100 text-xs text-slate-400 text-center">
-                        Ingin membayar kas? Hubungi Bendahara Kelas 11 TJKT 1.
+                    <div class="mt-6 pt-3 border-t border-slate-100 flex flex-col gap-2">
+                        <button onclick="exportToExcel()" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                            <span>Unduh Laporan Kas (.xlsx)</span>
+                        </button>
+                        <p class="text-[11px] text-slate-400 text-center">Ingin membayar kas? Hubungi Bendahara Kelas 11 TJKT 1.</p>
                     </div>
                 </div>
             </div>
@@ -259,7 +265,7 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
-                                <th class="py-3 px-4 font-semibold">Tanggal</th>
+                                <th class="py-3 px-4 font-semibold">Tanggal (dd/mm/yy)</th>
                                 <th class="py-3 px-4 font-semibold">Keperluan / Keterangan</th>
                                 <th class="py-3 px-4 font-semibold">Kategori</th>
                                 <th class="py-3 px-4 font-semibold text-right">Nominal Pengeluaran</th>
@@ -373,7 +379,7 @@
                     <div class="flex items-center gap-3 bg-slate-800/90 p-2.5 px-3.5 rounded-xl border border-slate-700">
                         <div>
                             <span class="text-[11px] text-slate-400 block">Tagihan Minggu Berjalan:</span>
-                            <span id="admin-week-target-text" class="text-xs sm:text-sm font-bold text-amber-400">Minggu ke-16 (Wajib: Rp 80.000)</span>
+                            <span id="admin-week-target-text" class="text-xs sm:text-sm font-bold text-amber-400">Minggu ke-16 (30/10/26) • Wajib: Rp 80.000</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <button onclick="changeWeek(-1)" class="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition active:scale-95" title="Kurangi 1 Minggu">
@@ -386,15 +392,19 @@
                         </div>
                     </div>
 
-                    <!-- Tombol Pengaturan PIN, Reset & Logout -->
-                    <div class="flex items-center gap-2">
+                    <!-- Tombol Ekspor Excel, Pengaturan PIN, Reset & Logout -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="exportToExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/30 transition active:scale-95" title="Ekspor Laporan Kas Kelas ke File Microsoft Excel (.xlsx)">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                            <span>Ekspor ke Excel (.xlsx)</span>
+                        </button>
                         <button onclick="openCredentialModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium flex items-center gap-1.5 transition" title="Ubah Username / PIN Bendahara">
                             <i data-lucide="key-round" class="w-3.5 h-3.5 text-amber-400"></i>
                             <span class="hidden sm:inline">Ubah PIN</span>
                         </button>
                         <button onclick="resetDemoData()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-medium transition flex items-center gap-1.5" title="Kembalikan ke data asli Excel KASKLS11TJKT1-1.xlsx">
                             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                            <span>Reset ke Data Awal Excel</span>
+                            <span class="hidden sm:inline">Reset Data Awal</span>
                         </button>
                         <button onclick="handleAdminLogout()" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition" title="Keluar dari sesi Bendahara">
                             <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
@@ -490,18 +500,26 @@
                             <i data-lucide="users" class="w-5 h-5 text-indigo-600"></i>
                             Daftar Kas Seluruh Siswa Kelas 11 TJKT 1
                         </h3>
-                        <p class="text-xs text-slate-500 mt-0.5">Klik kotak minggu (M1–M16) atau tombol <strong>+1 Mgg (5rb)</strong> setiap kali siswa membayar kas.</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Klik tombol minggu bertanggal (<strong>M1 17/07/26</strong> s/d <strong>M16 30/10/26</strong>) atau tombol <strong>+1 Mgg (5rb)</strong> setiap kali siswa membayar kas.</p>
                     </div>
 
-                    <!-- Form Tambah Anggota Cepat -->
-                    <form onsubmit="addMember(event)" class="flex items-center gap-2 w-full sm:w-auto">
-                        <input type="text" id="new-member-name" placeholder="Nama siswa baru..." required
-                            class="w-full sm:w-52 px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition shadow-sm">
-                            <i data-lucide="user-plus" class="w-4 h-4"></i>
-                            <span>Tambah</span>
+                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <!-- Tombol Cepat Ekspor Excel di Atas Tabel -->
+                        <button type="button" onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition shadow-sm">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>Unduh Excel (.xlsx)</span>
                         </button>
-                    </form>
+
+                        <!-- Form Tambah Anggota Cepat -->
+                        <form onsubmit="addMember(event)" class="flex items-center gap-2 flex-grow sm:flex-grow-0">
+                            <input type="text" id="new-member-name" placeholder="Nama siswa baru..." required
+                                class="w-full sm:w-48 px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition shadow-sm">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                <span>Tambah</span>
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Filter & Pencarian -->
@@ -526,7 +544,7 @@
                             <tr class="bg-slate-50/80 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
                                 <th class="py-3.5 px-4 font-semibold w-10">No</th>
                                 <th class="py-3.5 px-4 font-semibold min-w-[200px]">Nama Siswa</th>
-                                <th class="py-3.5 px-4 font-semibold text-center">Checklist Mingguan (Klik untuk Set)</th>
+                                <th class="py-3.5 px-4 font-semibold text-center">Checklist Mingguan & Tanggal (dd/mm/yy)</th>
                                 <th class="py-3.5 px-4 font-semibold text-center">Mgg Lunas</th>
                                 <th class="py-3.5 px-4 font-semibold text-right">Sudah Bayar</th>
                                 <th class="py-3.5 px-4 font-semibold text-right">Kekurangan</th>
@@ -610,7 +628,7 @@
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
-                                        <th class="py-3 px-4 font-semibold">Tanggal</th>
+                                        <th class="py-3 px-4 font-semibold">Tanggal (dd/mm/yy)</th>
                                         <th class="py-3 px-4 font-semibold">Keperluan</th>
                                         <th class="py-3 px-4 font-semibold">Kategori</th>
                                         <th class="py-3 px-4 font-semibold text-right">Nominal</th>
@@ -719,47 +737,60 @@
     <!-- JavaScript Application Logic -->
     <script>
         const WEEKLY_FEE = 5000;
-        const STORAGE_KEY = 'kasKelas_11TJKT1_v2';
-        const AUTH_SESSION_KEY = 'kaskelas_admin_logged_in_v2';
+        const STORAGE_KEY = 'kasKelas_11TJKT1_v3';
+        const AUTH_SESSION_KEY = 'kaskelas_admin_logged_in_v3';
 
-        // Daftar Tanggal Asli 16 Minggu (17 Jul 2026 - 30 Okt 2026)
+        // Daftar Tanggal Asli 16 Minggu dalam Format dd/mm/yy (17/07/26 - 30/10/26)
         const BASE_WEEK_DATES = [
-            "17 Jul 2026", // Minggu 1
-            "24 Jul 2026", // Minggu 2
-            "31 Jul 2026", // Minggu 3
-            "07 Agu 2026", // Minggu 4
-            "14 Agu 2026", // Minggu 5
-            "21 Agu 2026", // Minggu 6
-            "28 Agu 2026", // Minggu 7
-            "04 Sep 2026", // Minggu 8
-            "11 Sep 2026", // Minggu 9
-            "18 Sep 2026", // Minggu 10
-            "25 Sep 2026", // Minggu 11
-            "02 Okt 2026", // Minggu 12
-            "09 Okt 2026", // Minggu 13
-            "16 Okt 2026", // Minggu 14
-            "23 Okt 2026", // Minggu 15
-            "30 Okt 2026"  // Minggu 16
+            "17/07/26", // Minggu 1
+            "24/07/26", // Minggu 2
+            "31/07/26", // Minggu 3
+            "07/08/26", // Minggu 4
+            "14/08/26", // Minggu 5
+            "21/08/26", // Minggu 6
+            "28/08/26", // Minggu 7
+            "04/09/26", // Minggu 8
+            "11/09/26", // Minggu 9
+            "18/09/26", // Minggu 10
+            "25/09/26", // Minggu 11
+            "02/10/26", // Minggu 12
+            "09/10/26", // Minggu 13
+            "16/10/26", // Minggu 14
+            "23/10/26", // Minggu 15
+            "30/10/26"  // Minggu 16
         ];
 
-        // Fungsi mendapatkan label tanggal untuk Minggu ke-w (otomatis +7 hari jika > 16)
+        // Fungsi mendapatkan label tanggal format dd/mm/yy untuk Minggu ke-w (otomatis +7 hari jika > 16)
         function getWeekDateLabel(weekNum) {
             if (weekNum >= 1 && weekNum <= BASE_WEEK_DATES.length) {
                 return BASE_WEEK_DATES[weekNum - 1];
             }
-            const baseDate = new Date(2026, 9, 30); // 30 Okt 2026
+            const baseDate = new Date(2026, 9, 30); // 30/10/26
             const extraDays = (weekNum - 16) * 7;
             baseDate.setDate(baseDate.getDate() + extraDays);
-            const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
             const d = String(baseDate.getDate()).padStart(2, '0');
-            const m = months[baseDate.getMonth()];
-            const y = baseDate.getFullYear();
-            return `${d} ${m} ${y}`;
+            const m = String(baseDate.getMonth() + 1).padStart(2, '0');
+            const y = String(baseDate.getFullYear()).slice(-2);
+            return `${d}/${m}/${y}`;
+        }
+
+        // Fungsi mengubah tanggal YYYY-MM-DD ke format dd/mm/yy
+        function formatDateDDMMYY(dateStr) {
+            if (!dateStr) return '-';
+            if (/^\d{2}\/\d{2}\/\d{2}$/.test(dateStr)) return dateStr;
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                const yyyy = parts[0];
+                const mm = parts[1].padStart(2, '0');
+                const dd = parts[2].padStart(2, '0');
+                return `${dd}/${mm}/${yyyy.slice(-2)}`;
+            }
+            return dateStr;
         }
 
         // Data Default Awal Sesuai File Excel KASKLS11TJKT1-1.xlsx
         const defaultData = {
-            currentWeek: 16, // Minggu ke-16 (30 Okt 2026) = Wajib Rp 80.000
+            currentWeek: 16, // Minggu ke-16 (30/10/26) = Wajib Rp 80.000
             adminAuth: {
                 username: "umicapa",
                 password: "420911"
@@ -996,16 +1027,16 @@
         }
 
         // Hitung Rekap Pemasukan Bulanan Berdasarkan Minggu Terbayar
-        // Juli 2026 = Minggu 1-3 (3 mgg)
-        // Agustus 2026 = Minggu 4-7 (4 mgg)
-        // September 2026 = Minggu 8-11 (4 mgg)
-        // Oktober 2026 = Minggu 12-16 (5 mgg)
+        // Juli 2026 = Minggu 1-3 (17/07/26 - 31/07/26)
+        // Agustus 2026 = Minggu 4-7 (07/08/26 - 28/08/26)
+        // September 2026 = Minggu 8-11 (04/09/26 - 25/09/26)
+        // Oktober 2026 = Minggu 12-16 (02/10/26 - 30/10/26)
         function calculateMonthlyBreakdown() {
             const periods = [
-                { id: 'juli', name: 'Juli 2026', rangeText: 'Minggu 1 – 3 (17–31 Jul)', startWeek: 1, endWeek: 3, total: 0 },
-                { id: 'agustus', name: 'Agustus 2026', rangeText: 'Minggu 4 – 7 (07–28 Agu)', startWeek: 4, endWeek: 7, total: 0 },
-                { id: 'september', name: 'September 2026', rangeText: 'Minggu 8 – 11 (04–25 Sep)', startWeek: 8, endWeek: 11, total: 0 },
-                { id: 'oktober', name: 'Oktober 2026', rangeText: 'Minggu 12 – 16 (02–30 Okt)', startWeek: 12, endWeek: 16, total: 0 }
+                { id: 'juli', name: 'Juli 2026', rangeText: 'M1–M3 (17/07/26 – 31/07/26)', startWeek: 1, endWeek: 3, total: 0 },
+                { id: 'agustus', name: 'Agustus 2026', rangeText: 'M4–M7 (07/08/26 – 28/08/26)', startWeek: 4, endWeek: 7, total: 0 },
+                { id: 'september', name: 'September 2026', rangeText: 'M8–M11 (04/09/26 – 25/09/26)', startWeek: 8, endWeek: 11, total: 0 },
+                { id: 'oktober', name: 'Oktober 2026', rangeText: 'M12–M16 (02/10/26 – 30/10/26)', startWeek: 12, endWeek: 16, total: 0 }
             ];
 
             let extraTotal = 0;
@@ -1026,12 +1057,13 @@
             });
 
             if (appData.currentWeek > 16 || extraTotal > 0) {
+                const lastWeekNum = Math.max(17, appData.currentWeek);
                 periods.push({
                     id: 'lanjutan',
                     name: 'November+ 2026',
-                    rangeText: `Minggu 17+`,
+                    rangeText: `M17+ (${getWeekDateLabel(17)} – ${getWeekDateLabel(lastWeekNum)})`,
                     startWeek: 17,
-                    endWeek: Math.max(17, appData.currentWeek),
+                    endWeek: lastWeekNum,
                     total: extraTotal
                 });
             }
@@ -1169,7 +1201,7 @@
                         <div class="flex justify-between items-start">
                             <div>
                                 <span class="text-xs font-bold block">Minggu ${w}</span>
-                                <span class="text-[11px] font-medium opacity-80">${dateLabel}</span>
+                                <span class="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-black/5 text-[11px] font-mono font-bold tracking-tight">${dateLabel}</span>
                             </div>
                             ${iconHtml}
                         </div>
@@ -1213,7 +1245,7 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50";
                     tr.innerHTML = `
-                        <td class="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">${exp.date}</td>
+                        <td class="py-3 px-4 text-xs font-mono font-semibold text-slate-600 whitespace-nowrap">${formatDateDDMMYY(exp.date)}</td>
                         <td class="py-3 px-4 font-medium text-slate-800">${exp.title}</td>
                         <td class="py-3 px-4"><span class="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-xs">${exp.category}</span></td>
                         <td class="py-3 px-4 text-right font-semibold text-rose-600 whitespace-nowrap">- ${formatRp(exp.amount)}</td>
@@ -1366,19 +1398,20 @@
                     `;
                 }
 
-                // Matriks Checklist Mingguan Interaktif (M1 s/d currentWeek)
-                let weekPillsHtml = `<div class="flex items-center justify-center gap-1 min-w-[280px]">`;
+                // Matriks Checklist Mingguan Interaktif dengan Tanggal dd/mm/yy (M1 s/d currentWeek)
+                let weekPillsHtml = `<div class="flex items-center justify-start gap-1.5 min-w-[680px] py-0.5">`;
                 for (let w = 1; w <= appData.currentWeek; w++) {
                     const isPaid = w <= paidWeeks;
                     const wDate = getWeekDateLabel(w);
                     const pillClass = isPaid
-                        ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600"
-                        : "bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 border-slate-200";
+                        ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                        : "bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 border-slate-200";
                     weekPillsHtml += `
                         <button type="button" onclick="toggleMemberWeek(${m.id}, ${w})"
                             title="Minggu ${w} (${wDate}) - Klik untuk atur s/d M${w}"
-                            class="w-5 h-5 rounded text-[10px] font-bold border transition flex items-center justify-center ${pillClass}">
-                            ${w}
+                            class="px-1.5 py-1 rounded-lg border transition flex flex-col items-center justify-center min-w-[46px] ${pillClass}">
+                            <span class="text-[10px] font-extrabold leading-tight">M${w}</span>
+                            <span class="text-[9px] font-mono opacity-90 leading-tight mt-0.5">${wDate}</span>
                         </button>
                     `;
                 }
@@ -1453,7 +1486,7 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50";
                 tr.innerHTML = `
-                    <td class="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">${exp.date}</td>
+                    <td class="py-3 px-4 text-xs font-mono font-semibold text-slate-600 whitespace-nowrap">${formatDateDDMMYY(exp.date)}</td>
                     <td class="py-3 px-4 font-medium text-slate-800">${exp.title}</td>
                     <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">${exp.category}</span></td>
                     <td class="py-3 px-4 text-right font-bold text-rose-600 whitespace-nowrap">${formatRp(exp.amount)}</td>
@@ -1467,6 +1500,192 @@
             });
 
             lucide.createIcons();
+        }
+
+        // ==========================================
+        // FITUR EKSPOR LAPORAN KE EXCEL (.XLSX)
+        // ==========================================
+        function exportToExcel() {
+            if (typeof XLSX === 'undefined') {
+                showToast("Library Excel sedang dimuat, silakan coba sesaat lagi.");
+                return;
+            }
+
+            const totalWeeks = Math.max(16, appData.currentWeek);
+            const summary = calculateClassSummary();
+            const requiredPerMember = appData.currentWeek * WEEKLY_FEE;
+
+            // ----------------------------------------------------
+            // SHEET 1: Data Kas & Pengeluaran
+            // ----------------------------------------------------
+            const sheet1Rows = [];
+
+            // Judul Laporan
+            sheet1Rows.push(["LAPORAN KAS KELAS 11 TJKT 1 - TAHUN AJARAN 2026/2027"]);
+            sheet1Rows.push([
+                `Minggu Berjalan: Minggu ke-${appData.currentWeek} (${getWeekDateLabel(appData.currentWeek)})`,
+                "",
+                `Iuran Wajib: Rp ${WEEKLY_FEE.toLocaleString('id-ID')} / minggu`,
+                "",
+                `Target s/d Minggu Ini: Rp ${requiredPerMember.toLocaleString('id-ID')}`
+            ]);
+            sheet1Rows.push([]); // Baris kosong
+
+            // Header Tabel Kas Siswa (Tanggal dalam format dd/mm/yy)
+            const headerRow = ["NO", "NAMA"];
+            for (let w = 1; w <= totalWeeks; w++) {
+                headerRow.push(getWeekDateLabel(w));
+            }
+            headerRow.push("Jumlah Terbayar (Rp)", "Tunggakan (Rp)", "Status");
+            sheet1Rows.push(headerRow);
+
+            // Array untuk menghitung total siswa bayar per minggu
+            const weeklyPaidCounts = new Array(totalWeeks).fill(0);
+
+            // Isi Data 35 Siswa
+            appData.members.forEach((m, idx) => {
+                const paidWeeks = Math.floor(m.paidAmount / WEEKLY_FEE);
+                const arrears = Math.max(0, requiredPerMember - m.paidAmount);
+                const statusText = m.paidAmount >= requiredPerMember ? "LUNAS" : "BELUM LUNAS";
+
+                const row = [idx + 1, m.name];
+                for (let w = 1; w <= totalWeeks; w++) {
+                    if (w <= paidWeeks) {
+                        row.push("☑");
+                        weeklyPaidCounts[w - 1]++;
+                    } else {
+                        row.push("☐");
+                    }
+                }
+                row.push(m.paidAmount, arrears, statusText);
+                sheet1Rows.push(row);
+            });
+
+            // Baris Total Siswa Bayar per Minggu
+            const rowPaidCount = ["", "TOTAL SISWA BAYAR"];
+            for (let w = 1; w <= totalWeeks; w++) {
+                rowPaidCount.push(weeklyPaidCounts[w - 1]);
+            }
+            rowPaidCount.push("", "", "");
+            sheet1Rows.push(rowPaidCount);
+
+            // Baris Total Pemasukan Mingguan (Rp)
+            const rowWeeklyIncome = ["", "TOTAL PEMASUKAN MINGGUAN (Rp)"];
+            for (let w = 1; w <= totalWeeks; w++) {
+                rowWeeklyIncome.push(weeklyPaidCounts[w - 1] * WEEKLY_FEE);
+            }
+            rowWeeklyIncome.push(summary.totalIncome, summary.totalArrears, "");
+            sheet1Rows.push(rowWeeklyIncome);
+
+            sheet1Rows.push([]); // Baris kosong
+
+            // Ringkasan Total Pemasukan, Pengeluaran, dan Saldo Kas
+            const summaryLabelColIndex = totalWeeks + 1;
+            const createSummaryRow = (label, value) => {
+                const r = new Array(totalWeeks + 5).fill("");
+                r[1] = label;
+                r[summaryLabelColIndex] = label;
+                r[summaryLabelColIndex + 1] = value;
+                return r;
+            };
+
+            sheet1Rows.push(createSummaryRow("TOTAL PEMASUKAN KAS (Rp)", summary.totalIncome));
+            sheet1Rows.push(createSummaryRow("TOTAL PENGELUARAN KELAS (Rp)", summary.totalExpense));
+            sheet1Rows.push(createSummaryRow("SALDO KAS TERSISA (Rp)", summary.currentBalance));
+
+            sheet1Rows.push([]);
+            sheet1Rows.push([]);
+
+            // Tabel Daftar Pengeluaran di Bawah Sheet 1
+            sheet1Rows.push(["DAFTAR PENGELUARAN KAS KELAS 11 TJKT 1"]);
+            sheet1Rows.push(["NO", "TANGGAL (dd/mm/yy)", "PENGELUARAN / KEPERLUAN", "KATEGORI", "NOMINAL (Rp)"]);
+
+            if (appData.expenses.length === 0) {
+                sheet1Rows.push(["-", "-", "Belum ada pengeluaran", "-", 0]);
+            } else {
+                appData.expenses.forEach((exp, i) => {
+                    sheet1Rows.push([
+                        i + 1,
+                        formatDateDDMMYY(exp.date),
+                        exp.title,
+                        exp.category || "-",
+                        Number(exp.amount)
+                    ]);
+                });
+            }
+            sheet1Rows.push(["", "", "", "TOTAL PENGELUARAN (Rp)", summary.totalExpense]);
+
+            // Buat Worksheet 1 & Atur Lebar Kolom
+            const ws1 = XLSX.utils.aoa_to_sheet(sheet1Rows);
+            const ws1Cols = [
+                { wch: 5 },  // NO
+                { wch: 34 }  // NAMA
+            ];
+            for (let w = 1; w <= totalWeeks; w++) {
+                ws1Cols.push({ wch: 10 }); // Kolom tanggal dd/mm/yy
+            }
+            ws1Cols.push(
+                { wch: 22 }, // Jumlah Terbayar
+                { wch: 18 }, // Tunggakan
+                { wch: 15 }  // Status
+            );
+            ws1['!cols'] = ws1Cols;
+
+            // ----------------------------------------------------
+            // SHEET 2: Rekap Bulanan
+            // ----------------------------------------------------
+            const monthlyPeriods = calculateMonthlyBreakdown();
+            const sheet2Rows = [
+                ["REKAPITULASI PEMASUKAN KAS BULANAN - KELAS 11 TJKT 1"],
+                [`Status Minggu Berjalan: Minggu ke-${appData.currentWeek} (${getWeekDateLabel(appData.currentWeek)})`],
+                [],
+                ["NO", "BULAN", "RENTANG MINGGU & TANGGAL (dd/mm/yy)", "TOTAL PEMASUKAN (Rp)"]
+            ];
+
+            monthlyPeriods.forEach((p, idx) => {
+                sheet2Rows.push([
+                    idx + 1,
+                    p.name,
+                    p.rangeText,
+                    p.total
+                ]);
+            });
+
+            sheet2Rows.push([]);
+            sheet2Rows.push(["", "Total Keseluruhan Pemasukan Kas", "", summary.totalIncome]);
+            sheet2Rows.push(["", "Total Pengeluaran Kas", "", summary.totalExpense]);
+            sheet2Rows.push(["", "Saldo Kas Kelas Aktif", "", summary.currentBalance]);
+
+            const ws2 = XLSX.utils.aoa_to_sheet(sheet2Rows);
+            ws2['!cols'] = [
+                { wch: 6 },
+                { wch: 26 },
+                { wch: 36 },
+                { wch: 24 }
+            ];
+
+            // Gabungkan ke Workbook dan Unduh File .xlsx
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws1, "Data Kas & Pengeluaran");
+            XLSX.utils.book_append_sheet(wb, ws2, "Rekap Bulanan");
+
+            const fileName = `Laporan_Kas_11_TJKT_1_Mgg${appData.currentWeek}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showToast(`File Excel "${fileName}" berhasil diunduh!`);
+        }
+
+        // ==========================================
+        // AKSI & INTERAKSI ADMIN BENDAHARA
+        // ==========================================
+
+        // Ubah Minggu Berjalan (+1 atau -1)
+        function changeWeek(delta) {
+            const nextWeek = appData.currentWeek + delta;
+            if (nextWeek < 1) return;
+            appData.currentWeek = nextWeek;
+            saveData();
+            renderAll();
+            showToast(`Minggu ke-${nextWeek} (${getWeekDateLabel(nextWeek)}) • Tagihan: ${formatRp(nextWeek * WEEKLY_FEE)}`);
         }
 
         // ==========================================
